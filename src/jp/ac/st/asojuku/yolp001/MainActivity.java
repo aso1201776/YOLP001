@@ -3,9 +3,13 @@ package jp.ac.st.asojuku.yolp001;
 import jp.co.yahoo.android.maps.GeoPoint;
 import jp.co.yahoo.android.maps.MapController;
 import jp.co.yahoo.android.maps.MapView;
+import jp.co.yahoo.android.maps.PinOverlay;
+import jp.co.yahoo.android.maps.routing.RouteOverlay;
+import jp.co.yahoo.android.maps.routing.RouteOverlay.RouteOverlayListener;
 import jp.co.yahoo.android.maps.weather.WeatherOverlay;
 import jp.co.yahoo.android.maps.weather.WeatherOverlay.WeatherOverlayListener;
 import android.app.Activity;
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.location.Criteria;
 import android.location.Location;
@@ -13,14 +17,19 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.view.Menu;
+import android.view.MenuItem;
+import android.view.MotionEvent;
+import android.view.View;
+import android.widget.TextView;
 
 
-public class MainActivity extends Activity implements LocationListener, WeatherOverlayListener {
+public class MainActivity extends Activity implements LocationListener, WeatherOverlayListener, RouteOverlayListener, MapView.MapTouchListener {
 
 	//LocationManagerを準備
 	LocationManager mLocationManager = null;
 	//MapViewを準備
 	MapView mMapView = null;
+
 	//直前の緯度(1000000倍精度)
 	int lastLatitude = 0;
 	//直前の経度(1000000倍精度)
@@ -29,7 +38,46 @@ public class MainActivity extends Activity implements LocationListener, WeatherO
 	//雨雲レーダー表示用のオーバーレイクラス変数を準備
 	WeatherOverlay mWeatherOverlay = null;
 
+	//ルート検索Overlay
+	RouteOverlay mRouteOverlay = null;
+	//開始位置のピン
+	PinOverlay mPinOverlay = null;
+	//出発地
+	GeoPoint mStartPos;
+	//目的地
+	GeoPoint mGoalPos;
+	//プログレスダイアログ
+	ProgressDialog mProgDialog = null;
+	//距離表示用テキストビュー
+	TextView mDistLabel = null;
+	//メニュークリア
+	private static final int MENUITEM_CLEAR = 1;
 
+	@Override
+	public boolean onPrepareOptionsMenu(Menu menu) {
+		// TODO 自動生成されたメソッド・スタブ
+		//クリアメニューを追加
+		menu.removeItem(MENUITEM_CLEAR);
+		menu.add(0,MENUITEM_CLEAR, 0, "クリア");
+		return true;
+	}
+
+	@Override
+	public boolean onOptionsItemSelected(MenuItem item) {
+		// TODO 自動生成されたメソッド・スタブ
+		//メニュー選択処理
+		switch (item.getItemID()) {
+			case MENUITEM_CLEAR:
+				//地図上からルートと距離表示をクリア
+				if(mMapView != null) {
+					mMapView.removeOverlay(mRouteOverlay);
+					mRouteOverlay = null;
+					if(mDistLabel != null) mDistLabel.setVisibility(View.INVISIBLE);
+				}
+				return true;
+		}
+		return false;
+	}
 
 	@Override
 	public void onLocationChanged(Location location) {
@@ -56,6 +104,12 @@ public class MainActivity extends Activity implements LocationListener, WeatherO
 			this.lastLongitube = longitube;
 		}
 
+	}
+
+	@Override
+	public boolean finishRouteSearch(RouteOverlay arg0) {
+		// TODO 自動生成されたメソッド・スタブ
+		return false;
 	}
 
 	@Override
@@ -89,9 +143,48 @@ public class MainActivity extends Activity implements LocationListener, WeatherO
 	}
 
 	@Override
+	public boolean onLongPress(MapView arg0, Object arg1, PinOverlay arg2, GeoPoint arg3) {
+		// TODO 自動生成されたメソッド・スタブ
+		return false;
+	}
+
+	@Override
+	public boolean onPinchIn(MapView arg0) {
+		// TODO 自動生成されたメソッド・スタブ
+		return false;
+	}
+
+	@Override
+	public boolean onPinchOut(MapView arg0) {
+		// TODO 自動生成されたメソッド・スタブ
+		return false;
+	}
+
+	@Override
+	public boolean onTouch(MapView arg0, MotionEvent arg1) {
+		// TODO 自動生成されたメソッド・スタブ
+		return false;
+	}
+
+	@Override
+	public boolean errorRouteSearch(RouteOverlay arg0, int arg1) {
+		// TODO 自動生成されたメソッド・スタブ
+		return false;
+	}
+
+	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
+
+		//現在位置
+		mLocationManager = (LocationManager)this.getSystemService(Context.LOCATION_SERVICE);
+		mLocationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER,1000,0,this);
+		//プログレスダイアログを表示
+		mProgDialog = new ProgressDialog(this);
+		mProgDialog.setMessage("現在位置取得中");
+		mProgDialog.show();
+
 	}
 
 	@Override
@@ -158,5 +251,4 @@ public class MainActivity extends Activity implements LocationListener, WeatherO
 		getMenuInflater().inflate(R.menu.main, menu);
 		return true;
 	}
-
 }
